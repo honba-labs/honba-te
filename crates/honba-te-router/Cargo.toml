@@ -1,0 +1,9 @@
+[package]
+name = "honba-te-router"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono.workspace = true
+rust_decimal.workspace = true
