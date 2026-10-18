@@ -6,6 +6,14 @@ license.workspace = true
 
 [dependencies]
 async-trait.workspace = true
+chrono.workspace = true
+honba-core.workspace = true
+honba-mon.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
 uuid.workspace = true
 honba-kokoro-types.workspace = true

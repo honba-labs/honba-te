@@ -33,5 +33,7 @@ axum = "0.7"
 clap = { version = "4", features = ["derive"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono"] }
 
+honba-core          = { path = "../honba-core" }
+honba-mon           = { path = "../honba-mon" }
 honba-te-core       = { path = "crates/honba-te-core" }
 honba-kokoro-types  = { path = "../honba-kokoro/crates/honba-kokoro-types" }
