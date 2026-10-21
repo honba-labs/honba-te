@@ -150,6 +150,8 @@ impl BrokerExecutor for ZerodhaExecutor {
                     exchange_order_id: None,
                     status: OrderStatus::New,
                     timestamp: Utc::now(),
+                    correlation_id: req.correlation_id,
+                    client_id: req.client_id.clone(),
                 })
             } else {
                 Err(BrokerError::Rejected("empty data payload from Kite".into()))
