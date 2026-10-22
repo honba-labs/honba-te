@@ -1,0 +1,38 @@
+[package]
+name = "honba-te-auth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+# Native OS credential storage via keyring-rs (secret-service on Linux,
+# Keychain on macOS, Credential Manager on Windows).
+keyring = ["dep:keyring"]
+
+[dependencies]
+# RFC 6238 TOTP is implemented from scratch (SHA-1/SHA-256/HMAC/Base32
+# hand-rolled) to keep the headless authentication core dependency-free.
+async-trait.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+# Headless REST login flows.
+reqwest.workspace = true
+
+# Request correlation ids for eDIS batches.
+uuid.workspace = true
+
+# Optional native keyring credential storage (v1 blocking API ships the
+# per-platform native backends: Keychain / Credential Manager / secret-service).
+keyring = { version = "4", optional = true }
+
+[dev-dependencies]
+proptest = "1"
+# Paused-time scheduler tests (tokio::time::advance).
+tokio = { workspace = true, features = ["test-util"] }

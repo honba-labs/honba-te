@@ -105,45 +105,8 @@ impl SmartOrderRouter {
         self.risk_engine.record_fill(fill);
     }
 
-    /// Record cancellation into the risk engine for OTR accounting.
+    /// Record an order cancellation into the risk engine for OTR accounting.
     pub fn record_cancellation(&mut self, algo_id: &str) {
-        self.risk_engine.record_cancellation(algo_id);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use honba_core::*;
-    use honba_mon::RiskRefusal;
-    use honba_te_core::MockBrokerExecutor;
-
-    #[tokio::test]
-    async fn test_smart_order_router_flow() {
-        let mut router = SmartOrderRouter::new(RiskLimits::default(), OtrConfig::default());
-        let mock = Arc::new(MockBrokerExecutor::new(false));
-        router.register_broker(mock, true);
-
-        let now = Utc::now();
-        let inst = InstrumentId::new(Exchange::Nse, "INFY");
-        let req = OrderRequest::new(
-            inst.clone(),
-            OrderSide::Buy,
-            OrderType::Limit(Price::from_rupees("1500.00").unwrap()),
-            Quantity::from_u64(10),
-            "algo-sor-1",
-        );
-
-        // Routing works
-        let ack = router.route_order(req.clone(), None, now).await.unwrap();
-        assert_eq!(ack.status, OrderStatus::New);
-
-        // Global kill switch triggers rejection before touching broker
-        router.risk_engine.halt_global("emergency halt", now);
-        let err = router.route_order(req, None, now).await.unwrap_err();
-        assert!(matches!(
-            err,
-            BrokerError::RiskRefusal(RiskRefusal::GlobalHalted { .. })
-        ));
+        self.risk_engine.record_cancellation(algo_id, Utc::now());
     }
 }

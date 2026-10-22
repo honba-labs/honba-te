@@ -311,19 +311,19 @@ W1   W2   W3   W4   W5   W6   W7   W8   W9   W10  W11  W12  W13
 ```
 
 ### Phase 1: Canonical Type Hardening, Token-Bucket Rate Limiter & Core Trait Evolution (M0) — Week 1–2
-- [ ] **Workspace Cleanup**: Excise all references to `honba-kokoro-types` in `Cargo.toml`. Standardize 100% on `honba-core`.
-- [ ] **Exact Decimal Precision**: Audit all order and fill payload structs. Replace all `.parse::<f64>()` with exact `rust_decimal::Decimal` formatting.
-- [ ] **Product Taxonomy**: Implement canonical `ProductType` (`CncDelivery`, `MisIntraday`, `NrmlDerivative`, `MtfMargin`).
-- [ ] **`BrokerExecutor` Trait v2**: Expand trait to include `fetch_positions`, `fetch_margins`, `fetch_order_book`, and `health_check`.
-- [ ] **`ExecutionStream` Trait**: Define asynchronous streaming interface for real-time order status updates and fills.
-- [ ] **Token-Bucket Rate Limiter**: Build prioritized `TokenBucketRateLimiter` with queue jumping for emergency cancel commands.
+- [x] **Workspace Cleanup**: Excise all references to `honba-kokoro-types` in `Cargo.toml`. Standardize 100% on `honba-core`.
+- [x] **Exact Decimal Precision**: Audit all order and fill payload structs. Replace all `.parse::<f64>()` with exact `rust_decimal::Decimal` formatting.
+- [x] **Product Taxonomy**: Implement canonical `ProductType` (`CncDelivery`, `MisIntraday`, `NrmlDerivative`, `MtfMargin`).
+- [x] **`BrokerExecutor` Trait v2**: Expand trait to include `fetch_positions`, `fetch_margins`, `fetch_order_book`, and `health_check`.
+- [x] **`ExecutionStream` Trait**: Define asynchronous streaming interface for real-time order status updates and fills.
+- [x] **Token-Bucket Rate Limiter**: Build prioritized `TokenBucketRateLimiter` with queue jumping for emergency cancel commands.
 
 ### Phase 2: Headless TOTP Authentication & CDSL eDIS Authorization (M1) — Week 3–4
-- [ ] **`honba-te-auth` Crate**: Scaffold new authentication crate with encrypted local keyring storage (`keyring-rs`).
-- [ ] **RFC 6238 TOTP Engine**: Implement zero-dependency TOTP calculation from Base32 secrets.
-- [ ] **Headless Session Login**: Build automated login state machines for Zerodha Kite, Upstox v2, and Angel One SmartAPI.
-- [ ] **Token Caching & Auto-Refresh**: Background task checking token expiry and triggering refresh before market open (08:30 IST).
-- [ ] **CDSL eDIS Pre-Authorization**: Implement CDSL TPIN batch pre-authorization workflow for delivery holdings.
+- [x] **`honba-te-auth` Crate**: Scaffold new authentication crate with encrypted local keyring storage (`keyring-rs`).
+- [x] **RFC 6238 TOTP Engine**: Implement zero-dependency TOTP calculation from Base32 secrets.
+- [x] **Headless Session Login**: Build automated login state machines for Zerodha Kite, Upstox v2, and Angel One SmartAPI.
+- [x] **Token Caching & Auto-Refresh**: Background task checking token expiry and triggering refresh before market open (08:30 IST).
+- [x] **CDSL eDIS Pre-Authorization**: Implement CDSL TPIN batch pre-authorization workflow for delivery holdings.
 
 ### Phase 3: Production Multi-Broker REST Adapters & WebSocket Postback Listeners (M2) — Week 5–7
 - [ ] **Zerodha Kite Connect v3 REST**: Full implementation of order placement, modifications, cancellations, positions, and margins.

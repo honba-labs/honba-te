@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "crates/honba-te-core",
+  "crates/honba-te-auth",
   "crates/honba-te-zerodha",
   "crates/honba-te-upstox",
   "crates/honba-te-angelone",
@@ -33,7 +34,8 @@ axum = "0.7"
 clap = { version = "4", features = ["derive"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono"] }
 
-honba-core          = { path = "../honba-core" }
-honba-mon           = { path = "../honba-mon" }
-honba-te-core       = { path = "crates/honba-te-core" }
-honba-kokoro-types  = { path = "../honba-kokoro/crates/honba-kokoro-types" }
+honba-core      = { path = "../honba-core" }
+honba-mon       = { path = "../honba-mon" }
+honba-te-core   = { path = "crates/honba-te-core" }
+honba-te-auth   = { path = "crates/honba-te-auth" }
+schemars        = { version = "0.8", features = ["derive", "chrono", "uuid1", "rust_decimal"] }
