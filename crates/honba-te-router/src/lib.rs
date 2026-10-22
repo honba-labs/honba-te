@@ -110,3 +110,21 @@ impl SmartOrderRouter {
         self.risk_engine.record_cancellation(algo_id, Utc::now());
     }
 }
+
+pub mod cost;
+pub mod health;
+pub mod otr;
+pub mod sor;
+
+pub use cost::BrokerCostModel;
+pub use health::{CircuitState, HealthConfig, HealthTracker};
+pub use otr::{OtrBalanceConfig, OtrLedger};
+pub use sor::{
+    BrokerRegistration, BrokerStatus, ResilientRouter, RoutePolicy, RoutedAck, SorConfig,
+};
+
+// ---------------------------------------------------------------------------
+// Legacy v1 routers (backward compatibility) — superseded by `sor` v2 for
+// multi-broker routing; kept for the integrated risk-engine flow and for
+// exact notional helpers.
+// ---------------------------------------------------------------------------
