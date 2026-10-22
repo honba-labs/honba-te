@@ -24,7 +24,10 @@ pub mod wire;
 
 pub use decimal::{format_fixed_exact, quantity_to_u32_exact};
 pub use error::BrokerError;
-pub use executor::{BrokerExecutor, MockBrokerExecutor, RiskGatedExecutor};
+pub use executor::{
+    BrokerExecutor, IcebergOrderExecutor, MockBrokerExecutor, RiskGatedExecutor,
+    validate_native_legs,
+};
 pub use ratelimit::{
     BrokerRateCatalog, RateLimitedBroker, RateLimiterConfig, RequestPriority,
     TokenBucketRateLimiter,

@@ -335,11 +335,11 @@ W1   W2   W3   W4   W5   W6   W7   W8   W9   W10  W11  W12  W13
 - [x] **Angel One SmartStream**: WebSocket order status listener.
 
 ### Phase 4: SEBI Scrip Freeze Limits & Execution Slicing Algos (M3) — Week 8–9
-- [ ] **`honba-te-slicer` Crate**: Scaffold execution slicing module.
-- [ ] **Scrip Freeze Limit Catalog**: Load instrument freeze quantities from NSE/BSE master data (e.g., NIFTY 1800, BANKNIFTY 900).
-- [ ] **Automatic Parent Order Slicing**: Transparently split orders exceeding freeze limits into synchronized child orders.
-- [ ] **Native & Synthetic Iceberg Engine**: Support broker-native icebergs (Zerodha) and synthetic slicing for Upstox/Angel.
-- [ ] **TWAP Execution Algorithm**: Time-sliced execution with randomized Gaussian intervals and limit-chase logic.
+- [x] **`honba-te-slicer` Crate**: Scaffold execution slicing module.
+- [x] **Scrip Freeze Limit Catalog**: Load instrument freeze quantities from NSE/BSE master data (e.g., NIFTY 1800, BANKNIFTY 900).
+- [x] **Automatic Parent Order Slicing**: Transparently split orders exceeding freeze limits into synchronized child orders.
+- [x] **Native & Synthetic Iceberg Engine**: Support broker-native icebergs (Zerodha) and synthetic slicing for Upstox/Angel.
+- [x] **TWAP Execution Algorithm**: Time-sliced execution with randomized Gaussian intervals and limit-chase logic.
 
 ### Phase 5: Resilient Smart Order Router (SOR) & Dynamic Broker Failover (M4) — Week 10–11
 - [ ] **Dynamic SOR v2**: Refactor `honba-te-router` to support multi-broker registration and routing strategies.

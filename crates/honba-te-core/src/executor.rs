@@ -10,10 +10,41 @@ use uuid::Uuid;
 
 use honba_core::{FillReport, Money, OrderAck, OrderRequest, OrderStatus, Price, Quantity};
 
+use crate::decimal::quantity_to_u32_exact;
 use crate::error::BrokerError;
 use crate::types::{BrokerHealth, BrokerMargins, BrokerPosition, OrderSnapshot, ProductType};
 
-/// Unified trait implemented by broker execution adapters (Zerodha, Upstox, Angel One, Paper/Sim).
+/// Gateway contract for native iceberg legging: `display` must divide the
+/// parent quantity exactly into 2..=50 legs (Kite Connect v3 documented caps).
+pub fn validate_native_legs(
+    parent_quantity: Quantity,
+    display_quantity: Quantity,
+) -> Result<u32, BrokerError> {
+    use rust_decimal::prelude::ToPrimitive;
+    let parent = quantity_to_u32_exact(parent_quantity.0)? as u64;
+    let display = quantity_to_u32_exact(display_quantity.0)? as u64;
+    if display == 0 || display >= parent {
+        return Err(BrokerError::InvalidRequest(format!(
+            "iceberg display quantity {display} must be non-zero and smaller than parent {parent}"
+        )));
+    }
+    if !parent.is_multiple_of(display) {
+        return Err(BrokerError::InvalidRequest(format!(
+            "iceberg display quantity {display} must divide parent {parent} exactly"
+        )));
+    }
+    let legs = parent / display;
+    if !(2..=50).contains(&legs) {
+        return Err(BrokerError::InvalidRequest(format!(
+            "iceberg leg count {legs} outside the gateway range 2..=50"
+        )));
+    }
+    legs.to_u32()
+        .ok_or_else(|| BrokerError::InvalidRequest("iceberg leg count overflows".into()))
+}
+
+/// Unified trait implemented by broker execution adapters (Zerodha, Upstox,
+/// Angel One, Paper/Sim).
 ///
 /// # Trait v2 Surface
 /// Compared with v1, this adds:
@@ -83,6 +114,44 @@ pub trait BrokerExecutor: Send + Sync {
 
     /// Query the latest order status by broker order ID (polling fallback).
     async fn get_order_status(&self, order_id: &str) -> Result<OrderStatus, BrokerError>;
+}
+
+/// Optional broker-native iceberg placement (Kite Connect v3 variety
+/// `iceberg`).
+///
+/// Brokers that meter iceberg legs themselves (currently Zerodha) implement
+/// this by routing the parent through their native iceberg variety; the leg
+/// count is derived from `parent.quantity / display_quantity`. Adapters for
+/// venues without a native iceberg route (all but Zerodha today) fall back to
+/// the slicer's synthetic iceberg runner, so the default implementation
+/// returns [`BrokerError::InvalidRequest`].
+#[async_trait]
+pub trait IcebergOrderExecutor: Send + Sync {
+    /// Place a parent order with broker-native iceberg legging.
+    ///
+    /// `display_quantity` is the per-leg visible quantity. The broker derives
+    /// the leg count as `parent.quantity / display_quantity`, which per the
+    /// gateway contract must divide exactly into 2..=50 legs.
+    async fn place_iceberg_order(
+        &self,
+        parent: OrderRequest,
+        display_quantity: Quantity,
+    ) -> Result<OrderAck, BrokerError> {
+        let _ = (parent, display_quantity);
+        Err(BrokerError::InvalidRequest(
+            "broker-native iceberg placement is not supported by this adapter".into(),
+        ))
+    }
+
+    /// Derived native leg count for a parent/display pair, validated against
+    /// the gateway contract (exact division, 2..=50 legs).
+    fn native_iceberg_legs(
+        &self,
+        parent_quantity: Quantity,
+        display_quantity: Quantity,
+    ) -> Result<u32, BrokerError> {
+        validate_native_legs(parent_quantity, display_quantity)
+    }
 }
 
 /// A wrapper around any [`BrokerExecutor`] that strictly enforces pre-trade risk checks

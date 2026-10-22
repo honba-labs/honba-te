@@ -41,7 +41,7 @@ use honba_te_core::decimal::{format_fixed_exact, quantity_to_u32_exact};
 use honba_te_core::wire;
 use honba_te_core::{
     BrokerError, BrokerExecutor, BrokerHealth, BrokerMargins, BrokerPosition, BrokerRateCatalog,
-    OrderSnapshot, PositionSide, ProductType, RateLimitedBroker,
+    IcebergOrderExecutor, OrderSnapshot, PositionSide, ProductType, RateLimitedBroker,
 };
 
 /// Zerodha Kite Connect execution adapter.
@@ -507,6 +507,51 @@ impl BrokerExecutor for ZerodhaExecutor {
             return Ok(kite_status(&last.status));
         }
         Err(BrokerError::OrderNotFound(order_id.to_string()))
+    }
+}
+
+/// Broker-native iceberg placement on the Kite `iceberg` order variety.
+#[async_trait]
+impl IcebergOrderExecutor for ZerodhaExecutor {
+    async fn place_iceberg_order(
+        &self,
+        parent: OrderRequest,
+        display_quantity: Quantity,
+    ) -> Result<OrderAck, BrokerError> {
+        let form = Self::build_iceberg_payload(&parent, self.product, display_quantity)?;
+        let value = self
+            .request_kite(Method::POST, "/orders/iceberg", Some(form))
+            .await?;
+        let data: PlaceOrderData = Self::kite_data(value)?;
+        Ok(OrderAck {
+            order_id: data.order_id,
+            client_order_id: parent.client_order_id,
+            exchange_order_id: None,
+            status: OrderStatus::New,
+            timestamp: Utc::now(),
+            correlation_id: parent.correlation_id,
+            client_id: parent.client_id.clone(),
+        })
+    }
+}
+
+/// Construct a Kite iceberg order payload: the regular form legs plus the
+/// documented `iceberg_quantity` (per-leg visible quantity) and derived
+/// `iceberg_legs` count (2..=50).
+impl ZerodhaExecutor {
+    pub fn build_iceberg_payload(
+        req: &OrderRequest,
+        product: ProductType,
+        display_quantity: Quantity,
+    ) -> Result<HashMap<&'static str, String>, BrokerError> {
+        let mut form = Self::build_order_payload(req, product)?;
+        let legs = honba_te_core::validate_native_legs(req.quantity, display_quantity)?;
+        form.insert("iceberg_legs", legs.to_string());
+        form.insert(
+            "iceberg_quantity",
+            quantity_to_u32_exact(display_quantity.0)?.to_string(),
+        );
+        Ok(form)
     }
 }
 
