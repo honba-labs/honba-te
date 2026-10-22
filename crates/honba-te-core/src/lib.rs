@@ -20,6 +20,7 @@ pub mod executor;
 pub mod ratelimit;
 pub mod stream;
 pub mod types;
+pub mod wire;
 
 pub use decimal::{format_fixed_exact, quantity_to_u32_exact};
 pub use error::BrokerError;
