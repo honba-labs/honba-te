@@ -326,13 +326,13 @@ W1   W2   W3   W4   W5   W6   W7   W8   W9   W10  W11  W12  W13
 - [x] **CDSL eDIS Pre-Authorization**: Implement CDSL TPIN batch pre-authorization workflow for delivery holdings.
 
 ### Phase 3: Production Multi-Broker REST Adapters & WebSocket Postback Listeners (M2) — Week 5–7
-- [ ] **Zerodha Kite Connect v3 REST**: Full implementation of order placement, modifications, cancellations, positions, and margins.
-- [ ] **Zerodha Axum Postback Listener**: Embedded HTTP webhook receiver with HMAC SHA-256 signature verification.
-- [ ] **Zerodha Kite Ticker Stream**: WebSocket order update parser extracting binary `order_update` payloads.
-- [ ] **Upstox v2 REST Client**: Full REST API implementation with exact Decimal serialization.
-- [ ] **Upstox v2 WebSocket Feed**: Portfolio and order execution stream decoding.
-- [ ] **Angel One SmartAPI 2.0 Client**: Full REST implementation with complete header metadata and error code taxonomy.
-- [ ] **Angel One SmartStream**: WebSocket order status listener.
+- [x] **Zerodha Kite Connect v3 REST**: Full implementation of order placement, modifications, cancellations, positions, and margins.
+- [x] **Zerodha Axum Postback Listener**: Embedded HTTP webhook receiver with HMAC SHA-256 signature verification.
+- [x] **Zerodha Kite Ticker Stream**: WebSocket order update parser extracting binary `order_update` payloads.
+- [x] **Upstox v2 REST Client**: Full REST API implementation with exact Decimal serialization.
+- [x] **Upstox v2 WebSocket Feed**: Portfolio and order execution stream decoding.
+- [x] **Angel One SmartAPI 2.0 Client**: Full REST implementation with complete header metadata and error code taxonomy.
+- [x] **Angel One SmartStream**: WebSocket order status listener.
 
 ### Phase 4: SEBI Scrip Freeze Limits & Execution Slicing Algos (M3) — Week 8–9
 - [ ] **`honba-te-slicer` Crate**: Scaffold execution slicing module.
