@@ -342,11 +342,11 @@ W1   W2   W3   W4   W5   W6   W7   W8   W9   W10  W11  W12  W13
 - [x] **TWAP Execution Algorithm**: Time-sliced execution with randomized Gaussian intervals and limit-chase logic.
 
 ### Phase 5: Resilient Smart Order Router (SOR) & Dynamic Broker Failover (M4) — Week 10–11
-- [ ] **Dynamic SOR v2**: Refactor `honba-te-router` to support multi-broker registration and routing strategies.
-- [ ] **Broker Health Circuit Breakers**: Track rolling RTT latency, HTTP 5xx errors, and automatic trip/reset logic.
-- [ ] **Cost-Optimized Routing**: Policy routing delivery orders to zero-brokerage brokers and derivatives to flat-fee brokers.
-- [ ] **Multi-Account OTR Balancing**: Allocate order placements and modifications across broker accounts to prevent SEBI OTR threshold breaches.
-- [ ] **Automated Failover Engine**: If primary broker rejects with transport timeout or network error, seamlessly re-route to secondary broker.
+- [x] **Dynamic SOR v2**: Refactor `honba-te-router` to support multi-broker registration and routing strategies.
+- [x] **Broker Health Circuit Breakers**: Track rolling RTT latency, HTTP 5xx errors, and automatic trip/reset logic.
+- [x] **Cost-Optimized Routing**: Policy routing delivery orders to zero-brokerage brokers and derivatives to flat-fee brokers.
+- [x] **Multi-Account OTR Balancing**: Allocate order placements and modifications across broker accounts to prevent SEBI OTR threshold breaches.
+- [x] **Automated Failover Engine**: If primary broker rejects with transport timeout or network error, seamlessly re-route to secondary broker.
 
 ### Phase 6: High-Throughput Audit Journal & SEBI Regulatory Exporter (M5) — Week 12–13
 - [ ] **`honba-te-audit` Crate**: Scaffold regulatory journal module.
