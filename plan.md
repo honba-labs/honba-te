@@ -349,11 +349,12 @@ W1   W2   W3   W4   W5   W6   W7   W8   W9   W10  W11  W12  W13
 - [x] **Automated Failover Engine**: If primary broker rejects with transport timeout or network error, seamlessly re-route to secondary broker.
 
 ### Phase 6: High-Throughput Audit Journal & SEBI Regulatory Exporter (M5) — Week 12–13
-- [ ] **`honba-te-audit` Crate**: Scaffold regulatory journal module.
-- [ ] **High-Performance Journaling**: Implement append-only SQLite WAL and Parquet event storage using `sqlx`.
-- [ ] **Cryptographic Hash Chain**: Implement tamper-evident SHA-256 hashing for all recorded order actions.
-- [ ] **Compliance Field Enrichment**: Automatically record system IP, MAC address, microsecond UTC timestamps, and raw wire payloads.
-- [ ] **SEBI Regulatory Exporter**: Implement CLI tool generating standard SEBI Annexure CSV files for regulatory compliance audits.
+- [x] **`honba-te-audit` Crate**: Scaffold regulatory journal module.
+- [x] **High-Performance Journaling**: Implement append-only SQLite WAL and Parquet event storage using `sqlx`.
+  *(Deviation: `sqlx`/SQLite is absent from this build environment's offline dependency cache; delivered instead as fsynced append-only JSONL segment WAL — `wal-*.jsonl`, rotation at 10k entries, `sync_data()` per sealed append — plus real Apache Parquet compaction via `arrow`/`parquet` 53. The append-only durability and tamper-evidence contracts are unchanged; documented in `honba-te-audit::journal` and `README.md`.)*
+- [x] **Cryptographic Hash Chain**: Implement tamper-evident SHA-256 hashing for all recorded order actions.
+- [x] **Compliance Field Enrichment**: Automatically record system IP, MAC address, microsecond UTC timestamps, and raw wire payloads.
+- [x] **SEBI Regulatory Exporter**: Implement CLI tool generating standard SEBI Annexure CSV files for regulatory compliance audits.
 
 ---
 
