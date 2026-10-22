@@ -8,6 +8,7 @@ members = [
   "crates/honba-te-angelone",
   "crates/honba-te-router",
   "crates/honba-te-slicer",
+  "crates/honba-te-audit",
 ]
 
 [workspace.package]
@@ -35,6 +36,10 @@ proptest = "1.12"
 axum = "0.7"
 clap = { version = "4", features = ["derive"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono"] }
+sha2 = "0.11"
+hex = "0.4"
+parquet = { version = "53", features = ["arrow"] }
+arrow = "53"
 
 honba-core      = { path = "../honba-core" }
 honba-mon       = { path = "../honba-mon" }
