@@ -28,7 +28,7 @@ use serde_json::Value;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 
-use honba_core::{FillReport, InstrumentId, OrderSide, Price, Quantity};
+use honba_core::{FillReport, InstrumentId, Money, OrderSide, Price, Quantity};
 use honba_te_auth::crypto::sha256_hex;
 use honba_te_core::{
     BrokerError, BrokerExecutionEvent, ChannelExecutionStream, ExecutionEventSink,
@@ -330,6 +330,8 @@ fn postback_to_event(
                 timestamp: wire_time(&pb.order_timestamp),
                 correlation_id: None,
                 client_id: None,
+                fee: Money::zero_inr(),
+                fee_breakdown: None,
             }))
         }
         "REJECTED" => Some(BrokerExecutionEvent::OrderRejected {

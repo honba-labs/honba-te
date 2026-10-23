@@ -21,7 +21,7 @@ use chrono::{NaiveDate, Utc};
 use serde_json::Value;
 use tokio::sync::mpsc;
 
-use honba_core::{FillReport, InstrumentId, OrderAck, OrderSide, OrderStatus, Price, Quantity};
+use honba_core::{FillReport, InstrumentId, Money, OrderAck, OrderSide, OrderStatus, Price, Quantity};
 use honba_te_core::wire;
 use honba_te_core::{BrokerError, BrokerExecutionEvent, ExecutionStream};
 
@@ -271,6 +271,8 @@ impl SmartStreamOrderStream {
                     timestamp: timestamp_of(&update, now),
                     correlation_id: None,
                     client_id: None,
+                    fee: Money::zero_inr(),
+                    fee_breakdown: None,
                 }))
             }
             "REJECTED" => Some(BrokerExecutionEvent::OrderRejected {
