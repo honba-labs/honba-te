@@ -46,3 +46,16 @@ honba-mon       = { path = "../honba-mon" }
 honba-te-core   = { path = "crates/honba-te-core" }
 honba-te-auth   = { path = "crates/honba-te-auth" }
 schemars        = { version = "0.8", features = ["derive", "chrono", "uuid1", "rust_decimal"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[profile.prod]
+inherits = "release"
+lto = true
+codegen-units = 1
