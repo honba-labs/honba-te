@@ -1,0 +1,19 @@
+{
+  "orderid": "201020000000001",
+  "exchange": "NSE",
+  "tradingsymbol": "INFY-EQ",
+  "symboltoken": "1594",
+  "producttype": "DELIVERY",
+  "transactiontype": "BUY",
+  "ordertype": "LIMIT",
+  "status": "complete",
+  "price": "1450.50",
+  "averageprice": "1450.50",
+  "triggerprice": "0.00",
+  "filledshares": "100",
+  "quantity": "100",
+  "stoploss": "-1",
+  "squareoff": "-1",
+  "trailingstoploss": "-1",
+  "lastmodifiedtime": "10:30:00"
+}

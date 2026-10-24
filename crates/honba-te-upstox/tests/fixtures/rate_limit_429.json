@@ -1,0 +1,10 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "errorCode": "UPI1001",
+      "message": "Too many requests. Rate limit of 25 requests per second exceeded.",
+      "errorType": "RATELIMIT_EXCEEDED"
+    }
+  ]
+}

@@ -193,7 +193,33 @@ impl AngeloneExecutor {
         path: &str,
         json_body: Option<Value>,
     ) -> Result<Value, BrokerError> {
-        let headers = self.auth_headers()?;
+        self.request_smartapi_traced(method, path, json_body, None)
+            .await
+    }
+
+    async fn request_smartapi_traced(
+        &self,
+        method: Method,
+        path: &str,
+        json_body: Option<Value>,
+        trace_context: Option<&honba_core::TraceContext>,
+    ) -> Result<Value, BrokerError> {
+        let span = tracing::info_span!(
+            "broker_http_request",
+            broker = "angelone",
+            endpoint = path,
+            http.method = %method,
+            http.status_code = tracing::field::Empty,
+        );
+        let _guard = span.enter();
+
+        let mut headers = self.auth_headers()?;
+        if let Some(tc) = trace_context {
+            if let Ok(val) = HeaderValue::from_str(&tc.to_traceparent()) {
+                headers.insert("traceparent", val);
+            }
+        }
+
         let url = format!("{}{}", self.base_url, path);
         let req = self.client.request(method, &url).headers(headers);
         let req = if let Some(body) = json_body {
@@ -201,11 +227,20 @@ impl AngeloneExecutor {
         } else {
             req
         };
-        let res = req
-            .send()
-            .await
-            .map_err(|e| BrokerError::Transport(e.to_string()))?;
+        let started = Instant::now();
+        let res = match req.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                let duration = started.elapsed();
+                honba_te_core::telemetry::record_http_request("angelone", path, 0, duration);
+                return Err(BrokerError::Transport(e.to_string()));
+            }
+        };
         let status = res.status().as_u16();
+        let duration = started.elapsed();
+        span.record("http.status_code", status);
+        honba_te_core::telemetry::record_http_request("angelone", path, status, duration);
+
         let text = res
             .text()
             .await
@@ -248,7 +283,7 @@ impl AngeloneExecutor {
 /// → Auth, rate-limit phrasing → RateLimited); unknown codes stay Rejected.
 pub fn map_smartapi_error(status: u16, code: &str, message: &str) -> BrokerError {
     let message_u = message.to_uppercase();
-    if status == 429 || code == "AB1010" || message_u.contains("REQUEST LIMIT") {
+    if status == 429 || code == "AB1010" || code == "AB1007" || message_u.contains("REQUEST LIMIT") || message_u.contains("RATE LIMIT") {
         return BrokerError::RateLimited(format!("{code}: {message}"));
     }
     if status == 401
@@ -260,8 +295,11 @@ pub fn map_smartapi_error(status: u16, code: &str, message: &str) -> BrokerError
     {
         return BrokerError::Auth(format!("{code}: {message}"));
     }
-    if code == "AB2001" {
+    if code == "AB2001" || status == 400 || message_u.contains("INVALID") {
         return BrokerError::InvalidRequest(format!("{code}: {message}"));
+    }
+    if status == 503 || code == "AB503" || message_u.contains("GATEWAY") || message_u.contains("MAINTENANCE") || message_u.contains("SERVER ERROR") {
+        return BrokerError::Transport(format!("{code}: {message}"));
     }
     BrokerError::Rejected(format!("{code}: {message}"))
 }
@@ -461,13 +499,14 @@ impl BrokerExecutor for AngeloneExecutor {
     async fn place_order(&self, req: OrderRequest) -> Result<OrderAck, BrokerError> {
         let payload = Self::build_order_payload(&req, self.product)?;
         let body = self
-            .request_smartapi(
+            .request_smartapi_traced(
                 Method::POST,
                 "/rest/secure/angelbroking/order/v1/placeOrder",
                 Some(
                     serde_json::to_value(&payload)
                         .map_err(|e| BrokerError::InvalidRequest(format!("payload: {e}")))?,
                 ),
+                req.trace_context.as_ref(),
             )
             .await?;
         let data: OrderIdData = Self::smartapi_data(body)?;
@@ -479,7 +518,7 @@ impl BrokerExecutor for AngeloneExecutor {
             timestamp: Utc::now(),
             correlation_id: req.correlation_id,
             client_id: req.client_id.clone(),
-            trace_context: None,
+            trace_context: req.trace_context,
         })
     }
 
@@ -693,13 +732,22 @@ impl BrokerExecutor for AngeloneExecutor {
                 .and_then(|s| s.trim().parse::<Decimal>().ok())
                 .unwrap_or(Decimal::ZERO)
         };
-        let available_cash = get("equityamount") + get("commodityamount");
-        let equity_limit = get("equitylimit");
-        let used_margin = (equity_limit - get("equityamount")).max(Decimal::ZERO);
+        let available_cash = if data.get("availablecash").is_some() {
+            get("availablecash")
+        } else {
+            get("equityamount") + get("commodityamount")
+        };
+        let used_margin = if data.get("utiliseddebits").is_some() {
+            get("utiliseddebits") + get("utilisedspan") + get("utilisedexposure")
+        } else {
+            let equity_limit = get("equitylimit");
+            (equity_limit - get("equityamount")).max(Decimal::ZERO)
+        };
+        let collateral = get("collateral");
         Ok(BrokerMargins {
             available_cash: Money::inr(available_cash),
             used_margin: Money::inr(used_margin),
-            collateral: Money::inr(Decimal::ZERO),
+            collateral: Money::inr(collateral),
         })
     }
 

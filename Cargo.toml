@@ -40,6 +40,10 @@ sha2 = "0.11"
 hex = "0.4"
 parquet = { version = "53", features = ["arrow"] }
 arrow = "53"
+prometheus = { version = "0.13", features = ["process"] }
+once_cell = "1"
+opentelemetry = { version = "0.27", features = ["trace"] }
+tracing-opentelemetry = "0.28"
 
 honba-core      = { path = "../honba-core" }
 honba-mon       = { path = "../honba-mon" }

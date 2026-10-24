@@ -168,7 +168,35 @@ impl UpstoxExecutor {
         path: &str,
         json_body: Option<Value>,
     ) -> Result<Value, BrokerError> {
-        let headers = self.auth_headers()?;
+        self.request_upstox_traced(method, path, json_body, None)
+            .await
+    }
+
+    /// Instrumented Upstox request attaching tracing span, W3C `traceparent`,
+    /// and Prometheus latency metrics.
+    async fn request_upstox_traced(
+        &self,
+        method: Method,
+        path: &str,
+        json_body: Option<Value>,
+        trace_context: Option<&honba_core::TraceContext>,
+    ) -> Result<Value, BrokerError> {
+        let span = tracing::info_span!(
+            "broker_http_request",
+            broker = "upstox",
+            endpoint = path,
+            http.method = %method,
+            http.status_code = tracing::field::Empty,
+        );
+        let _guard = span.enter();
+
+        let mut headers = self.auth_headers()?;
+        if let Some(tc) = trace_context {
+            if let Ok(val) = HeaderValue::from_str(&tc.to_traceparent()) {
+                headers.insert("traceparent", val);
+            }
+        }
+
         let url = format!("{}{}", self.base_url, path);
         let req = self.client.request(method, &url).headers(headers);
         let req = if let Some(body) = json_body {
@@ -176,11 +204,20 @@ impl UpstoxExecutor {
         } else {
             req
         };
-        let res = req
-            .send()
-            .await
-            .map_err(|e| BrokerError::Transport(e.to_string()))?;
+        let started = Instant::now();
+        let res = match req.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                let duration = started.elapsed();
+                honba_te_core::telemetry::record_http_request("upstox", path, 0, duration);
+                return Err(BrokerError::Transport(e.to_string()));
+            }
+        };
         let status = res.status().as_u16();
+        let duration = started.elapsed();
+        span.record("http.status_code", status);
+        honba_te_core::telemetry::record_http_request("upstox", path, status, duration);
+
         let text = res
             .text()
             .await
@@ -273,8 +310,14 @@ pub fn map_upstox_error(status: u16, errors: &[Value]) -> BrokerError {
     {
         return BrokerError::Auth(message);
     }
-    if error_type.contains("INVALID") || error_code.starts_with("UDI") {
+    if error_type.contains("INVALID")
+        || error_code.starts_with("UDI")
+        || error_code.contains("UDAPI100050")
+    {
         return BrokerError::InvalidRequest(message);
+    }
+    if status == 503 || error_code.contains("503") || error_type.contains("UNAVAILABLE") {
+        return BrokerError::Transport(message);
     }
     BrokerError::Rejected(message)
 }
@@ -480,12 +523,13 @@ impl BrokerExecutor for UpstoxExecutor {
     async fn place_order(&self, req: OrderRequest) -> Result<OrderAck, BrokerError> {
         let payload = Self::build_order_payload(&req, self.product)?;
         let body = self
-            .request_upstox(
+            .request_upstox_traced(
                 Method::POST,
                 "/order/place",
                 Some(serde_json::to_value(&payload).map_err(|e| {
                     BrokerError::InvalidRequest(format!("order payload serialize: {e}"))
                 })?),
+                req.trace_context.as_ref(),
             )
             .await?;
         let data: OrderIdData = Self::upstox_data(body)?;
@@ -497,7 +541,7 @@ impl BrokerExecutor for UpstoxExecutor {
             timestamp: Utc::now(),
             correlation_id: req.correlation_id,
             client_id: req.client_id.clone(),
-            trace_context: None,
+            trace_context: req.trace_context,
         })
     }
 
@@ -560,6 +604,7 @@ impl BrokerExecutor for UpstoxExecutor {
             is_amo: false,
             order_id: Some(order_id.to_string()),
         };
+
         let body = self
             .request_upstox(
                 Method::PUT,
@@ -665,14 +710,17 @@ impl BrokerExecutor for UpstoxExecutor {
     }
 
     async fn fetch_margins(&self) -> Result<BrokerMargins, BrokerError> {
-        // GET /user/funds-and-margin — segment-float wire numbers decode
-        // exactly; utilisations sum across segments.
         let value = self.get_upstox("/user/funds-and-margin").await?;
         let data = value.get("data").cloned().unwrap_or(Value::Null);
 
         let available_cash = data
             .get("available_margin")
             .and_then(wire::decimal_from_json)
+            .or_else(|| {
+                data.get("equity")
+                    .and_then(|eq| eq.get("available_margin"))
+                    .and_then(wire::decimal_from_json)
+            })
             .or_else(|| {
                 let equity = data.get("equity_cash").and_then(wire::decimal_from_json);
                 let commodity = data.get("commodity_cash").and_then(wire::decimal_from_json);
@@ -685,15 +733,24 @@ impl BrokerExecutor for UpstoxExecutor {
             })
             .unwrap_or(Decimal::ZERO);
         let used = data
-            .get("equity_margin_utilised")
-            .and_then(|seg| seg.get("debits"))
+            .get("used_margin")
             .and_then(wire::decimal_from_json)
-            .unwrap_or(Decimal::ZERO)
-            + data
-                .get("commodity_margin_utilised")
-                .and_then(|seg| seg.get("debits"))
-                .and_then(wire::decimal_from_json)
-                .unwrap_or(Decimal::ZERO);
+            .or_else(|| {
+                data.get("equity")
+                    .and_then(|eq| eq.get("used_margin"))
+                    .and_then(wire::decimal_from_json)
+            })
+            .unwrap_or_else(|| {
+                data.get("equity_margin_utilised")
+                    .and_then(|seg| seg.get("debits"))
+                    .and_then(wire::decimal_from_json)
+                    .unwrap_or(Decimal::ZERO)
+                    + data
+                        .get("commodity_margin_utilised")
+                        .and_then(|seg| seg.get("debits"))
+                        .and_then(wire::decimal_from_json)
+                        .unwrap_or(Decimal::ZERO)
+            });
         let collateral = data
             .get("collateral")
             .and_then(wire::decimal_from_json)

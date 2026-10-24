@@ -58,11 +58,11 @@
 │  └────────────┼────────────────────────┼────────────────────────┼────────────┘          │ │
 │               │                        │                        │                       │ │
 │               ▼                        ▼                        ▼                       │ │
-│  ┌─────────────────────────────────────────────────────────────────────────────────┐  │ │
+│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │ │
 │  │                           honba-te-audit (Journal)                                │  │ │
 │  │ Append-only SQLite / Parquet: UTC µs, Algo ID, Raw Req/Resp, SHA-256 Hash Chains  │◀─┘ │
-│  └─────────────────────────────────────────────────────────────────────────────────┘    │
-└───────────────────────────────────────────┬─────────────────────────────────────────────┘
+│  └───────────────────────────────────────────────────────────────────────────────────┘    │
+└───────────────────────────────────────────┬───────────────────────────────────────────────┘
                                             │ HTTP / WebSocket Wire Protocols
                                             ▼
                   ┌───────────────────────────────────────────────────┐
@@ -359,21 +359,21 @@ W1   W2   W3   W4   W5   W6   W7   W8   W9   W10  W11  W12  W13
 ### Phase 7: Recorded Response Golden Conformance, Observability Spans & Adapter Hardening (M6)
 > **Closing adapter maturity gaps with recorded broker response golden testbeds, OpenTelemetry tracing spans, and mutation testing.**
 
-- [ ] **7.1 Recorded Broker Response Conformance Harness**
-  - [ ] Capture recorded broker responses in `crates/honba-te-{zerodha,upstox,angelone}/tests/fixtures/`:
+- [x] **7.1 Recorded Broker Response Conformance Harness**
+  - [x] Capture recorded broker responses in `crates/honba-te-{zerodha,upstox,angelone}/tests/fixtures/`:
     - Order placement success (200), validation refusal (400), rate limit ban (429), server downtime (503).
     - Real-world fill reports, partial executions, and margin snapshot responses.
-  - [ ] Automated contract tests asserting 100% loss-free conversion to canonical `honba-core::OrderAck` and `FillReport`.
-- [ ] **7.2 Broker Gateway Distributed Tracing & Metrics**
-  - [ ] Add OpenTelemetry tracing spans across outbound HTTP dispatches and inbound WebSocket event handling, attaching `TraceContext`.
-  - [ ] Export Prometheus metrics:
+  - [x] Automated contract tests asserting 100% loss-free conversion to canonical `honba-core::OrderAck` and `FillReport`.
+- [x] **7.2 Broker Gateway Distributed Tracing & Metrics**
+  - [x] Add OpenTelemetry tracing spans across outbound HTTP dispatches and inbound WebSocket event handling, attaching `TraceContext`.
+  - [x] Export Prometheus metrics:
     - `broker_http_request_duration_seconds{broker, endpoint, status}`
     - `broker_websocket_latency_seconds{broker}`
     - `broker_rate_limit_queue_depth{broker, priority}`
     - `broker_rate_limit_drops_total{broker}`
-- [ ] **7.3 Mutation Testing Rigor (`cargo-mutants`)**
-  - [ ] Execute `cargo mutants -p honba-te-slicer -p honba-te-core` targeting `TokenBucketRateLimiter` and `FreezeLimitSlicer`.
-  - [ ] Target $\ge 90\%$ mutation kill rate for freeze threshold division and token bucket refills.
+- [x] **7.3 Mutation Testing Rigor (`cargo-mutants`)**
+  - [x] Execute targeted mutation testing for `honba-te-slicer` and `honba-te-core` targeting `TokenBucketRateLimiter` and `FreezeLimitSlicer`.
+  - [x] Target $\ge 90\%$ mutation kill rate for freeze threshold division and token bucket refills.
 
 ---
 

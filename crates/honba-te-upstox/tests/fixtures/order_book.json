@@ -1,0 +1,22 @@
+{
+  "status": "success",
+  "data": [
+    {
+      "order_id": "240221000123456",
+      "exchange_order_id": "1100000000123456",
+      "exchange": "NSE",
+      "instrument_token": "NSE_EQ|INE009A01021",
+      "trading_symbol": "INFY-EQ",
+      "transaction_type": "BUY",
+      "product": "D",
+      "order_type": "LIMIT",
+      "status": "complete",
+      "quantity": 100,
+      "filled_quantity": 100,
+      "price": 1450.50,
+      "trigger_price": 0.0,
+      "tag": "algo-alpha",
+      "exchange_timestamp": "2024-03-15 10:30:00"
+    }
+  ]
+}

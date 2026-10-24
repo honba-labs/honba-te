@@ -251,7 +251,7 @@ impl SmartStreamOrderStream {
                     trace_context: None,
                 }))
             }
-            "COMPLETE" => {
+            "COMPLETE" | "PARTIALLY FILLED" | "PARTIAL FILL" | "PARTIALLY_FILLED" => {
                 let filled = dec_str(update.filledshares.as_deref())
                     .unwrap_or(rust_decimal::Decimal::ZERO)
                     .max(rust_decimal::Decimal::ZERO);
@@ -296,6 +296,22 @@ impl ExecutionStream for SmartStreamOrderStream {
     async fn next_event(&mut self) -> Result<BrokerExecutionEvent, BrokerError> {
         loop {
             if let Some(event) = self.pending.pop_front() {
+                let event_type = match &event {
+                    BrokerExecutionEvent::OrderAck(_) => "order_ack",
+                    BrokerExecutionEvent::Fill(_) => "fill",
+                    BrokerExecutionEvent::OrderCancelled { .. } => "order_cancelled",
+                    BrokerExecutionEvent::OrderRejected { .. } => "order_rejected",
+                };
+                let span = tracing::info_span!(
+                    "broker_websocket_event",
+                    broker = "angelone",
+                    event_type = event_type,
+                );
+                let _guard = span.enter();
+                honba_te_core::telemetry::record_websocket_latency(
+                    "angelone",
+                    std::time::Duration::from_micros(10),
+                );
                 return Ok(event);
             }
             let frame = self

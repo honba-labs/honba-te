@@ -1,0 +1,10 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "errorCode": "UDAPI503",
+      "message": "Upstox gateway is temporarily undergoing routine maintenance.",
+      "errorType": "SERVICE_UNAVAILABLE"
+    }
+  ]
+}

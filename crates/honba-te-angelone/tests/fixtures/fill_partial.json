@@ -1,0 +1,19 @@
+{
+  "orderid": "201020000000002",
+  "exchange": "NSE",
+  "tradingsymbol": "RELIANCE-EQ",
+  "symboltoken": "2885",
+  "producttype": "INTRADAY",
+  "transactiontype": "BUY",
+  "ordertype": "LIMIT",
+  "status": "partial fill",
+  "price": "2850.75",
+  "averageprice": "2850.75",
+  "triggerprice": "0.00",
+  "filledshares": "50",
+  "quantity": "100",
+  "stoploss": "-1",
+  "squareoff": "-1",
+  "trailingstoploss": "-1",
+  "lastmodifiedtime": "11:05:15"
+}

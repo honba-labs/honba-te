@@ -7,7 +7,7 @@
 //! | Priority | Class |
 //! |----------|-------|
 //! | [`RequestPriority::Immediate`] | Emergency kill-switch cancellations and manual panic halts |
-//! | [`RequestPriority::High`] | Stop-loss triggers and limit order cancellations |
+//! | [`RequestPriority::High`] | Stop-loss trigger adjustments and limit order cancellations |
 //! | [`RequestPriority::Normal`] | Passive order placements and modifications |
 //! | [`RequestPriority::Low`] | Background order-book, position and margin polling |
 //!
@@ -62,6 +62,25 @@ impl RequestPriority {
             Self::Normal => 2,
             Self::Low => 3,
         }
+    }
+
+    /// Label string for Prometheus metrics.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Immediate => "immediate",
+            Self::High => "high",
+            Self::Normal => "normal",
+            Self::Low => "low",
+        }
+    }
+}
+
+fn priority_level_str(level: u8) -> &'static str {
+    match level {
+        0 => "immediate",
+        1 => "high",
+        2 => "normal",
+        _ => "low",
     }
 }
 
@@ -216,12 +235,15 @@ fn seconds_to_duration(secs: Decimal) -> Duration {
 /// (tokens available, no strictly higher waiter) — kill-switch commands do not
 /// sit behind passive order-flow queues.
 pub struct TokenBucketRateLimiter {
+    broker: String,
     state: Mutex<BucketState>,
 }
 
 impl std::fmt::Debug for TokenBucketRateLimiter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TokenBucketRateLimiter").finish()
+        f.debug_struct("TokenBucketRateLimiter")
+            .field("broker", &self.broker)
+            .finish()
     }
 }
 
@@ -231,6 +253,7 @@ impl TokenBucketRateLimiter {
         let config = config.validated()?;
         let tokens = config.initial_tokens;
         Ok(Self {
+            broker: "generic".into(),
             state: Mutex::new(BucketState {
                 config,
                 tokens,
@@ -240,9 +263,20 @@ impl TokenBucketRateLimiter {
         })
     }
 
+    /// Set broker identifier for telemetry metrics.
+    pub fn with_broker(mut self, broker: impl Into<String>) -> Self {
+        self.broker = broker.into();
+        self
+    }
+
+    /// Broker identifier for this limiter.
+    pub fn broker(&self) -> &str {
+        &self.broker
+    }
+
     /// Create a limiter from the documented preset for the broker name.
     pub fn for_broker(name: &str) -> Result<Self, BrokerError> {
-        Self::new(BrokerRateCatalog::for_broker(name))
+        Ok(Self::new(BrokerRateCatalog::for_broker(name))?.with_broker(name))
     }
 
     /// Adaptively reconfigure capacity & refill rate, clamping the balance.
@@ -357,8 +391,9 @@ impl TokenBucketRateLimiter {
             // 2. Deadline expired with no grant: deregister and fail.
             if now >= deadline {
                 if registered {
-                    Self::deregister(&mut state, level, &core);
+                    Self::deregister(&self.broker, &mut state, level, &core);
                 }
+                crate::telemetry::record_rate_limit_drop(&self.broker);
                 let waited = max_wait;
                 return Err(BrokerError::RateLimited(format!(
                     "broker rate limiter exhausted: priority {priority:?} acquire of {cost} token(s) \
@@ -389,10 +424,16 @@ impl TokenBucketRateLimiter {
                     .or_insert_with(VecDeque::new)
                     .push_back(core.clone());
                 registered = true;
+                let q_len = state.waiters.get(&level).map(|q| q.len()).unwrap_or(0);
+                crate::telemetry::set_queue_depth(
+                    &self.broker,
+                    priority_level_str(level),
+                    q_len as i64,
+                );
             }
 
             // 4. Grant pass: service eligible heads (ours may be granted here).
-            Self::dispatch(&mut state);
+            Self::dispatch(&self.broker, &mut state);
             if core.granted.load(Ordering::SeqCst) {
                 return Ok(());
             }
@@ -412,7 +453,7 @@ impl TokenBucketRateLimiter {
     }
 
     /// Consume tokens with a default one-day budget; production call sites
-    /// should prefer [`Self::acquire_for`] with bounded waits.
+    /// should prefer [`Self::acquire_for`] with bounded waits.\npub async fn acquire(
     pub async fn acquire(
         &self,
         priority: RequestPriority,
@@ -438,7 +479,7 @@ impl TokenBucketRateLimiter {
     /// Internal: grant pass. Iterates priority levels in strict order; grants
     /// the head of an affordable level, pops it, and continues; stops at the
     /// first unaffordable head (lower priorities must not steal its budget).
-    fn dispatch(state: &mut BucketState) {
+    fn dispatch(broker: &str, state: &mut BucketState) {
         loop {
             let head = state
                 .waiters
@@ -447,13 +488,17 @@ impl TokenBucketRateLimiter {
                 .map(|(level, q)| (*level, q.front().unwrap().clone()))
                 .next();
 
-            let Some((_, head_core)) = head else { return };
+            let Some((level, head_core)) = head else {
+                return;
+            };
             if state.tokens < head_core.cost {
                 return; // Strict priority: never skip ahead of a richer waiter.
             }
             state.tokens -= head_core.cost;
             head_core.granted.store(true, Ordering::SeqCst);
             Self::pop_waiter(state, &head_core);
+            let q_len = state.waiters.get(&level).map(|q| q.len()).unwrap_or(0);
+            crate::telemetry::set_queue_depth(broker, priority_level_str(level), q_len as i64);
             head_core.ticket.notify_one();
             // Loop again: the freed budget may satisfy same/lower-priority heads.
         }
@@ -476,15 +521,19 @@ impl TokenBucketRateLimiter {
     }
 
     /// Internal: timeout-deregister a specific waiter identity.
-    fn deregister(state: &mut BucketState, level: u8, core: &Arc<WaiterCore>) {
+    fn deregister(broker: &str, state: &mut BucketState, level: u8, core: &Arc<WaiterCore>) {
         if let Some(queue) = state.waiters.get_mut(&level)
             && let Some(idx) = queue.iter().position(|w| Arc::ptr_eq(w, core))
         {
             queue.remove(idx);
+            let q_len = queue.len();
+            crate::telemetry::set_queue_depth(broker, priority_level_str(level), q_len as i64);
             return;
         }
         // Defensive sweep across all levels (should never be needed).
         Self::pop_waiter(state, core);
+        let q_len = state.waiters.get(&level).map(|q| q.len()).unwrap_or(0);
+        crate::telemetry::set_queue_depth(broker, priority_level_str(level), q_len as i64);
     }
 }
 
@@ -519,7 +568,7 @@ impl<E: BrokerExecutor> RateLimitedBroker<E> {
 
     /// Wrap a broker executor with an explicit limiter configuration.
     pub fn with_config(inner: E, config: RateLimiterConfig) -> Result<Self, BrokerError> {
-        let limiter = TokenBucketRateLimiter::new(config)?;
+        let limiter = TokenBucketRateLimiter::new(config)?.with_broker(inner.name());
         Ok(Self {
             inner,
             limiter: Arc::new(limiter),

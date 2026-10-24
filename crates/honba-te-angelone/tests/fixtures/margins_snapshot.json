@@ -1,0 +1,21 @@
+{
+  "status": true,
+  "message": "SUCCESS",
+  "errorcode": "",
+  "data": {
+    "net": "125000.50",
+    "availablecash": "100000.50",
+    "collateral": "25000.00",
+    "m2munrealized": "0.00",
+    "m2mrealized": "0.00",
+    "utiliseddebits": "20000.25",
+    "utilisedspan": "15000.25",
+    "utilisedexposure": "5000.00",
+    "utilisedoptionpremium": "0.00",
+    "utilisedturnover": "0.00",
+    "utilisedholding_sales": "0.00",
+    "equityamount": "100000.50",
+    "equitylimit": "140000.50",
+    "commodityamount": "0.00"
+  }
+}

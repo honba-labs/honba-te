@@ -1,0 +1,6 @@
+{
+  "status": false,
+  "message": "Exceeded access rate limit: maximum 10 requests per second",
+  "errorcode": "AB1007",
+  "data": {}
+}

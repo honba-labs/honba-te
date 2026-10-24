@@ -1,0 +1,6 @@
+{
+  "status": "error",
+  "message": "Invalid `quantity` value",
+  "data": null,
+  "error_type": "InputException"
+}

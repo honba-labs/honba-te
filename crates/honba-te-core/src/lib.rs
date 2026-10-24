@@ -19,6 +19,7 @@ pub mod error;
 pub mod executor;
 pub mod ratelimit;
 pub mod stream;
+pub mod telemetry;
 pub mod types;
 pub mod wire;
 

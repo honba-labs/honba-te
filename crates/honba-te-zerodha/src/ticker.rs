@@ -16,14 +16,16 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use chrono::Utc;
 use serde_json::Value;
 use tokio::sync::mpsc;
 
-use honba_core::{FillReport, InstrumentId, Money, OrderAck, OrderSide, OrderStatus, Price, Quantity};
+use honba_core::{
+    FillReport, InstrumentId, Money, OrderAck, OrderSide, OrderStatus, Price, Quantity,
+};
 use honba_te_core::wire;
 use honba_te_core::{BrokerError, BrokerExecutionEvent, ExecutionStream};
 
@@ -293,11 +295,21 @@ impl ExecutionStream for KiteTickerOrderStream {
                 .recv()
                 .await
                 .ok_or_else(|| BrokerError::Transport("kite ticker stream closed".into()))?;
-            for update in parse_order_update_frame(&frame)? {
+            let started = Instant::now();
+            let updates = parse_order_update_frame(&frame)?;
+            for update in updates {
+                let ws_span = tracing::info_span!(
+                    "broker_websocket_event",
+                    broker = "zerodha",
+                    order_id = %update.order_id,
+                    status = %update.status,
+                );
+                let _guard = ws_span.enter();
                 if let Some(event) = self.dispatch(update) {
                     self.pending.push_back(event);
                 }
             }
+            honba_te_core::telemetry::record_websocket_latency("zerodha", started.elapsed());
         }
     }
 }

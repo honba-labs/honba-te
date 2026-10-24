@@ -1,0 +1,6 @@
+{
+  "status": "error",
+  "message": "Service unavailable. Gateway maintenance in progress.",
+  "data": null,
+  "error_type": "NetworkException"
+}

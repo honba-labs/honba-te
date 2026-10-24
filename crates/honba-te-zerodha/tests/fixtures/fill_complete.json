@@ -1,0 +1,25 @@
+{
+  "type": "order",
+  "data": [
+    {
+      "order_id": "220119000332528",
+      "exchange_order_id": "1100000000123456",
+      "exchange": "NSE",
+      "tradingsymbol": "INFY",
+      "transaction_type": "BUY",
+      "order_type": "LIMIT",
+      "product": "CNC",
+      "status": "COMPLETE",
+      "status_message": null,
+      "quantity": 100,
+      "filled_quantity": 100,
+      "price": 1450.50,
+      "average_price": 1450.50,
+      "trigger_at": 0.0,
+      "tag": "algo-alpha",
+      "placed_by": "AB1234",
+      "exchange_timestamp": "2024-03-15 10:30:00",
+      "timestamp": "2024-03-15 10:30:00"
+    }
+  ]
+}

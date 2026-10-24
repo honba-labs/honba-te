@@ -11,14 +11,16 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use chrono::Utc;
 use serde_json::Value;
 use tokio::sync::mpsc;
 
-use honba_core::{FillReport, InstrumentId, Money, OrderAck, OrderSide, OrderStatus, Price, Quantity};
+use honba_core::{
+    FillReport, InstrumentId, Money, OrderAck, OrderSide, OrderStatus, Price, Quantity,
+};
 use honba_te_core::wire;
 use honba_te_core::{BrokerError, BrokerExecutionEvent, ExecutionStream};
 
@@ -98,61 +100,67 @@ pub fn parse_portfolio_feed_frame(text: &str) -> Result<Vec<UpstoxFeedUpdate>, B
     match value {
         Value::Array(items) => {
             let updates = items
-                .iter()
-                .cloned()
-                .map(serde_json::from_value::<UpstoxFeedUpdate>)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| {
-                    BrokerError::InvalidRequest(format!("upstox feed item malformed: {e}"))
-                })?;
-            Ok(updates
                 .into_iter()
-                .filter(|u| u.update_type.as_deref() == Some("order"))
-                .collect())
+                .filter(|v| {
+                    v.get("update_type")
+                        .and_then(Value::as_str)
+                        .map(|t| t.eq_ignore_ascii_case("order"))
+                        .unwrap_or(true)
+                })
+                .map(serde_json::from_value)
+                .collect::<Result<Vec<UpstoxFeedUpdate>, _>>()
+                .map_err(|e| {
+                    BrokerError::InvalidRequest(format!("upstox array element not order: {e}"))
+                })?;
+            Ok(updates)
         }
         Value::Object(_) => {
             let update_type = value.get("update_type").and_then(Value::as_str);
-            if update_type.map(|t| t != "order").unwrap_or(false) {
+            if let Some(t) = update_type
+                && !t.eq_ignore_ascii_case("order")
+            {
                 return Ok(Vec::new());
             }
             let update: UpstoxFeedUpdate = serde_json::from_value(value).map_err(|e| {
-                BrokerError::InvalidRequest(format!("upstox feed frame malformed: {e}"))
+                BrokerError::InvalidRequest(format!("upstox feed frame shape: {e}"))
             })?;
             Ok(vec![update])
         }
         _ => Err(BrokerError::InvalidRequest(
-            "upstox feed frame must be an object or array".into(),
+            "upstox feed frame must be JSON object or array".into(),
         )),
     }
 }
 
 fn feed_instrument(update: &UpstoxFeedUpdate) -> InstrumentId {
     let exchange = match update
-        .instrument_token
+        .exchange
         .as_deref()
-        .unwrap_or_default()
-        .split('|')
-        .next()
+        .or_else(|| {
+            update
+                .instrument_token
+                .as_deref()
+                .and_then(|t| t.split('|').next())
+        })
         .unwrap_or_default()
         .to_uppercase()
         .as_str()
     {
-        "BSE_EQ" | "BSE_FO" => honba_core::Exchange::Bse,
-        "MCX_FO" | "MCX_EQ" => honba_core::Exchange::Mcx,
+        "BSE" | "BSE_EQ" | "BSE_FO" => honba_core::Exchange::Bse,
+        "MCX" | "MCX_EQ" | "MCX_FO" => honba_core::Exchange::Mcx,
         _ => honba_core::Exchange::Nse,
     };
-    let symbol = update
+    let raw = update
         .tradingsymbol
         .as_deref()
-        .map(|s| s.to_uppercase())
-        .or_else(|| update.isin.clone().map(|i| i.to_uppercase()))
-        .map(|s| {
-            s.strip_suffix("-EQ")
-                .or_else(|| s.strip_suffix("-BE"))
-                .map(|t| t.to_string())
-                .unwrap_or(s)
-        })
-        .unwrap_or_default();
+        .or(update.isin.as_deref())
+        .unwrap_or_default()
+        .to_uppercase();
+    let symbol = raw
+        .strip_suffix("-EQ")
+        .or_else(|| raw.strip_suffix("-BE"))
+        .unwrap_or(&raw)
+        .to_string();
     InstrumentId::new(exchange, symbol)
 }
 
@@ -199,7 +207,6 @@ fn feed_fill_price(update: &UpstoxFeedUpdate) -> Price {
 /// Delta-tracks cumulative `filled_quantity` exactly like the Zerodha ticker
 /// stream, and supports injectable broker-order-id → client-correlation
 /// resolution.
-/// Lookup function type for broker→client correlation resolution.
 pub type FeedCorrelationLookup = Arc<dyn Fn(&str) -> Option<uuid::Uuid> + Send + Sync>;
 
 pub struct UpstoxOrderStream {
@@ -229,6 +236,7 @@ impl UpstoxOrderStream {
         self.client_order_id_of = Arc::new(lookup);
         self
     }
+
     fn dispatch(&mut self, update: UpstoxFeedUpdate) -> Option<BrokerExecutionEvent> {
         let order_id = update.order_id.clone().unwrap_or_default();
         if order_id.is_empty() {
@@ -309,11 +317,21 @@ impl ExecutionStream for UpstoxOrderStream {
                 .recv()
                 .await
                 .ok_or_else(|| BrokerError::Transport("upstox feed stream closed".into()))?;
-            for update in parse_portfolio_feed_frame(&frame)? {
+            let started = Instant::now();
+            let updates = parse_portfolio_feed_frame(&frame)?;
+            for update in updates {
+                let ws_span = tracing::info_span!(
+                    "broker_websocket_event",
+                    broker = "upstox",
+                    order_id = %update.order_id.as_deref().unwrap_or(""),
+                    status = %update.status.as_deref().unwrap_or(""),
+                );
+                let _guard = ws_span.enter();
                 if let Some(event) = self.dispatch(update) {
                     self.pending.push_back(event);
                 }
             }
+            honba_te_core::telemetry::record_websocket_latency("upstox", started.elapsed());
         }
     }
 }

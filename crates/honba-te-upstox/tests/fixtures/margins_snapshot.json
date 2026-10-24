@@ -1,0 +1,13 @@
+{
+  "status": "success",
+  "data": {
+    "equity": {
+      "available_margin": 125000.50,
+      "used_margin": 20000.25
+    },
+    "commodity": {
+      "available_margin": 0.00,
+      "used_margin": 0.00
+    }
+  }
+}

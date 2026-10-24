@@ -1,0 +1,10 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "errorCode": "UDAPI100050",
+      "message": "Invalid order parameters: quantity must be positive",
+      "errorType": "INVALID_INPUT"
+    }
+  ]
+}

@@ -173,7 +173,34 @@ impl ZerodhaExecutor {
         path: &str,
         form: Option<HashMap<&'static str, String>>,
     ) -> Result<Value, BrokerError> {
-        let headers = self.auth_headers()?;
+        self.request_kite_traced(method, path, form, None).await
+    }
+
+    /// Instrumented HTTP dispatch attaching OpenTelemetry span, W3C `traceparent`,
+    /// and exporting Prometheus latency metrics.
+    async fn request_kite_traced(
+        &self,
+        method: Method,
+        path: &str,
+        form: Option<HashMap<&'static str, String>>,
+        trace_context: Option<&honba_core::TraceContext>,
+    ) -> Result<Value, BrokerError> {
+        let span = tracing::info_span!(
+            "broker_http_request",
+            broker = "zerodha",
+            endpoint = path,
+            http.method = %method,
+            http.status_code = tracing::field::Empty,
+        );
+        let _guard = span.enter();
+
+        let mut headers = self.auth_headers()?;
+        if let Some(tc) = trace_context {
+            if let Ok(val) = HeaderValue::from_str(&tc.to_traceparent()) {
+                headers.insert("traceparent", val);
+            }
+        }
+
         let url = format!("{}{}", self.base_url, path);
         let req = self.client.request(method, &url).headers(headers);
         let req = if let Some(form) = form {
@@ -181,11 +208,20 @@ impl ZerodhaExecutor {
         } else {
             req
         };
-        let res = req
-            .send()
-            .await
-            .map_err(|e| BrokerError::Transport(e.to_string()))?;
+        let started = Instant::now();
+        let res = match req.send().await {
+            Ok(r) => r,
+            Err(e) => {
+                let duration = started.elapsed();
+                honba_te_core::telemetry::record_http_request("zerodha", path, 0, duration);
+                return Err(BrokerError::Transport(e.to_string()));
+            }
+        };
         let status = res.status().as_u16();
+        let duration = started.elapsed();
+        span.record("http.status_code", status);
+        honba_te_core::telemetry::record_http_request("zerodha", path, status, duration);
+
         let text = res
             .text()
             .await
@@ -319,7 +355,12 @@ impl BrokerExecutor for ZerodhaExecutor {
     async fn place_order(&self, req: OrderRequest) -> Result<OrderAck, BrokerError> {
         let form = Self::build_order_payload(&req, self.product)?;
         let value = self
-            .request_kite(Method::POST, "/orders/regular", Some(form))
+            .request_kite_traced(
+                Method::POST,
+                "/orders/regular",
+                Some(form),
+                req.trace_context.as_ref(),
+            )
             .await?;
         let data: PlaceOrderData = Self::kite_data(value)?;
         Ok(OrderAck {
@@ -330,7 +371,7 @@ impl BrokerExecutor for ZerodhaExecutor {
             timestamp: Utc::now(),
             correlation_id: req.correlation_id,
             client_id: req.client_id.clone(),
-            trace_context: None,
+            trace_context: req.trace_context,
         })
     }
 
@@ -463,10 +504,6 @@ impl BrokerExecutor for ZerodhaExecutor {
     }
 
     async fn fetch_margins(&self) -> Result<BrokerMargins, BrokerError> {
-        // GET /user/margins returns segment-wise envelopes:
-        // {"equity": {"available": {"cash": .., "collateral": ..},
-        //             "utilised": {"debits": .., "margins": .., "span": .., ..}},
-        //  "commodity": {...}}
         let value = self.get_kite("/user/margins").await?;
         let segments: HashMap<String, KiteMarginSegment> = Self::kite_data(value)?;
         let equity = segments
@@ -483,7 +520,6 @@ impl BrokerExecutor for ZerodhaExecutor {
                     .and_then(wire::decimal_from_json)
             })
             .unwrap_or(Decimal::ZERO);
-        // Used margin is the sum of every utilisation bucket Kite reports.
         let used_margin = equity
             .utilised
             .values()
@@ -521,7 +557,12 @@ impl IcebergOrderExecutor for ZerodhaExecutor {
     ) -> Result<OrderAck, BrokerError> {
         let form = Self::build_iceberg_payload(&parent, self.product, display_quantity)?;
         let value = self
-            .request_kite(Method::POST, "/orders/iceberg", Some(form))
+            .request_kite_traced(
+                Method::POST,
+                "/orders/iceberg",
+                Some(form),
+                parent.trace_context.as_ref(),
+            )
             .await?;
         let data: PlaceOrderData = Self::kite_data(value)?;
         Ok(OrderAck {
@@ -532,7 +573,7 @@ impl IcebergOrderExecutor for ZerodhaExecutor {
             timestamp: Utc::now(),
             correlation_id: parent.correlation_id,
             client_id: parent.client_id.clone(),
-            trace_context: None,
+            trace_context: parent.trace_context,
         })
     }
 }

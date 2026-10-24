@@ -1,0 +1,6 @@
+{
+  "status": "error",
+  "message": "Too many requests. Rate limit of 3 requests per second exceeded.",
+  "data": null,
+  "error_type": "TooManyRequests"
+}

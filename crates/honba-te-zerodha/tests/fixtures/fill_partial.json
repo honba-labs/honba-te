@@ -1,0 +1,25 @@
+{
+  "type": "order",
+  "data": [
+    {
+      "order_id": "220119000332529",
+      "exchange_order_id": "1100000000123457",
+      "exchange": "NSE",
+      "tradingsymbol": "RELIANCE",
+      "transaction_type": "BUY",
+      "order_type": "LIMIT",
+      "product": "MIS",
+      "status": "UPDATE",
+      "status_message": null,
+      "quantity": 100,
+      "filled_quantity": 40,
+      "price": 2850.75,
+      "average_price": 2850.75,
+      "trigger_at": 0.0,
+      "tag": "algo-part",
+      "placed_by": "AB1234",
+      "exchange_timestamp": "2024-03-15 11:15:30",
+      "timestamp": "2024-03-15 11:15:30"
+    }
+  ]
+}
