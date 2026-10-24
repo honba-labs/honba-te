@@ -332,6 +332,7 @@ fn postback_to_event(
                 client_id: None,
                 fee: Money::zero_inr(),
                 fee_breakdown: None,
+                trace_context: None,
             }))
         }
         "REJECTED" => Some(BrokerExecutionEvent::OrderRejected {

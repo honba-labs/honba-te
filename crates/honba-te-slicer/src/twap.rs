@@ -180,6 +180,7 @@ impl TwapPlan {
             tag: parent.tag.clone(),
             client_id: parent.client_id.clone(),
             correlation_id: Some(self.parent_client_order_id),
+            trace_context: parent.trace_context.clone(),
         }
     }
 }

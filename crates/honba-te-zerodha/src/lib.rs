@@ -330,6 +330,7 @@ impl BrokerExecutor for ZerodhaExecutor {
             timestamp: Utc::now(),
             correlation_id: req.correlation_id,
             client_id: req.client_id.clone(),
+            trace_context: None,
         })
     }
 
@@ -531,6 +532,7 @@ impl IcebergOrderExecutor for ZerodhaExecutor {
             timestamp: Utc::now(),
             correlation_id: parent.correlation_id,
             client_id: parent.client_id.clone(),
+            trace_context: None,
         })
     }
 }

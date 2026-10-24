@@ -230,6 +230,7 @@ impl KiteTickerOrderStream {
                 timestamp: ticker_timestamp(&update),
                 correlation_id: None,
                 client_id: None,
+                trace_context: None,
             }));
         }
         match status_upper.as_str() {
@@ -261,6 +262,7 @@ impl KiteTickerOrderStream {
                     client_id: None,
                     fee: Money::zero_inr(),
                     fee_breakdown: None,
+                    trace_context: None,
                 }))
             }
             "REJECTED" => Some(BrokerExecutionEvent::OrderRejected {

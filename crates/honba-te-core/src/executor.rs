@@ -311,6 +311,7 @@ impl BrokerExecutor for MockBrokerExecutor {
             timestamp: Utc::now(),
             correlation_id: req.correlation_id,
             client_id: req.client_id.clone(),
+            trace_context: None,
         };
 
         let mut lock = self.orders.lock().await;

@@ -74,6 +74,7 @@ impl BrokerExecutor for ScriptedBroker {
             timestamp: Utc::now(),
             correlation_id: req.correlation_id,
             client_id: req.client_id.clone(),
+            trace_context: None,
         })
         .inspect(|_| placed.push(req))
     }
@@ -154,6 +155,7 @@ pub fn fill_event(order_id: &str, quantity: u64) -> BrokerExecutionEvent {
         client_id: None,
         fee: Money::zero_inr(),
         fee_breakdown: None,
+        trace_context: None,
     })
 }
 
@@ -167,6 +169,7 @@ pub fn ack_event(order_id: &str) -> BrokerExecutionEvent {
         timestamp: Utc::now(),
         correlation_id: None,
         client_id: None,
+        trace_context: None,
     })
 }
 

@@ -237,6 +237,7 @@ impl SmartStreamOrderStream {
                 timestamp: timestamp_of(&update, now),
                 correlation_id: None,
                 client_id: None,
+                trace_context: None,
             })),
             "TRIGGER PENDING" | "VALIDATION PENDING" | "PUT ORDER REQ RECEIVED" => {
                 Some(BrokerExecutionEvent::OrderAck(OrderAck {
@@ -247,6 +248,7 @@ impl SmartStreamOrderStream {
                     timestamp: timestamp_of(&update, now),
                     correlation_id: None,
                     client_id: None,
+                    trace_context: None,
                 }))
             }
             "COMPLETE" => {
@@ -273,6 +275,7 @@ impl SmartStreamOrderStream {
                     client_id: None,
                     fee: Money::zero_inr(),
                     fee_breakdown: None,
+                    trace_context: None,
                 }))
             }
             "REJECTED" => Some(BrokerExecutionEvent::OrderRejected {

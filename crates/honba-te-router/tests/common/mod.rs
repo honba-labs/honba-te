@@ -123,6 +123,7 @@ impl BrokerExecutor for MockBroker {
             timestamp: Utc::now(),
             correlation_id: req.correlation_id,
             client_id: req.client_id.clone(),
+            trace_context: None,
         })
     }
 
@@ -146,6 +147,7 @@ impl BrokerExecutor for MockBroker {
             timestamp: Utc::now(),
             correlation_id: None,
             client_id: None,
+            trace_context: None,
         })
     }
 

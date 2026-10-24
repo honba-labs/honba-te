@@ -148,6 +148,7 @@ pub async fn run_synthetic_iceberg(
             tag: parent.tag.clone(),
             client_id: parent.client_id.clone(),
             correlation_id: Some(parent.client_order_id),
+            trace_context: parent.trace_context.clone(),
         };
         let ack = executor.place_order(child).await?;
         let order_id = ack.order_id.clone();
