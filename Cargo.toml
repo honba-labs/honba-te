@@ -10,6 +10,7 @@ members = [
   "crates/honba-te-slicer",
   "crates/honba-te-audit",
 ]
+default-members = []
 
 [workspace.package]
 version = "0.1.0"
