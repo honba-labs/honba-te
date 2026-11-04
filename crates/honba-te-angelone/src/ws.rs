@@ -21,7 +21,9 @@ use chrono::{NaiveDate, Utc};
 use serde_json::Value;
 use tokio::sync::mpsc;
 
-use honba_core::{FillReport, InstrumentId, Money, OrderAck, OrderSide, OrderStatus, Price, Quantity};
+use honba_core::{
+    FillReport, InstrumentId, Money, OrderAck, OrderSide, OrderStatus, Price, Quantity,
+};
 use honba_te_core::wire;
 use honba_te_core::{BrokerError, BrokerExecutionEvent, ExecutionStream};
 
