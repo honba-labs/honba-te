@@ -283,7 +283,12 @@ impl AngeloneExecutor {
 /// → Auth, rate-limit phrasing → RateLimited); unknown codes stay Rejected.
 pub fn map_smartapi_error(status: u16, code: &str, message: &str) -> BrokerError {
     let message_u = message.to_uppercase();
-    if status == 429 || code == "AB1010" || code == "AB1007" || message_u.contains("REQUEST LIMIT") || message_u.contains("RATE LIMIT") {
+    if status == 429
+        || code == "AB1010"
+        || code == "AB1007"
+        || message_u.contains("REQUEST LIMIT")
+        || message_u.contains("RATE LIMIT")
+    {
         return BrokerError::RateLimited(format!("{code}: {message}"));
     }
     if status == 401
@@ -298,7 +303,12 @@ pub fn map_smartapi_error(status: u16, code: &str, message: &str) -> BrokerError
     if code == "AB2001" || status == 400 || message_u.contains("INVALID") {
         return BrokerError::InvalidRequest(format!("{code}: {message}"));
     }
-    if status == 503 || code == "AB503" || message_u.contains("GATEWAY") || message_u.contains("MAINTENANCE") || message_u.contains("SERVER ERROR") {
+    if status == 503
+        || code == "AB503"
+        || message_u.contains("GATEWAY")
+        || message_u.contains("MAINTENANCE")
+        || message_u.contains("SERVER ERROR")
+    {
         return BrokerError::Transport(format!("{code}: {message}"));
     }
     BrokerError::Rejected(format!("{code}: {message}"))

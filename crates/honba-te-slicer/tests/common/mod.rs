@@ -8,7 +8,9 @@ use async_trait::async_trait;
 use chrono::Utc;
 use uuid::Uuid;
 
-use honba_core::{Exchange, FillReport, InstrumentId, Money, OrderRequest, OrderSide, OrderType, Price};
+use honba_core::{
+    Exchange, FillReport, InstrumentId, Money, OrderRequest, OrderSide, OrderType, Price,
+};
 use honba_te_core::{BrokerError, BrokerExecutionEvent, BrokerExecutor, ExecutionStream, Quantity};
 
 /// Broker executor replaying a script of order IDs and optional failure

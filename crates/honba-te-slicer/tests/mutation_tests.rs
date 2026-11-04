@@ -27,38 +27,62 @@ fn test_mutation_kill_integer_division_vs_div_ceil() {
 
     // Boundary 1: qty == limit -> exactly 1 leg of size limit
     let plan = plan_against_limit(&make_req(limit), Some(limit)).expect("plan");
-    assert_eq!(plan.legs.len(), 1, "Mutant kill: qty == limit must have 1 leg");
+    assert_eq!(
+        plan.legs.len(),
+        1,
+        "Mutant kill: qty == limit must have 1 leg"
+    );
     assert_eq!(plan.legs[0].quantity.0, Decimal::from(limit));
 
     // Boundary 2: qty == limit + 1 -> exactly 2 legs (size limit, size 1)
     // If mutant used integer division (qty / limit), it would yield 1 leg and drop 1 lot!
     let plan = plan_against_limit(&make_req(limit + 1), Some(limit)).expect("plan");
-    assert_eq!(plan.legs.len(), 2, "Mutant kill: qty == limit + 1 must have 2 legs, not qty / limit");
+    assert_eq!(
+        plan.legs.len(),
+        2,
+        "Mutant kill: qty == limit + 1 must have 2 legs, not qty / limit"
+    );
     assert_eq!(plan.legs[0].quantity.0, Decimal::from(limit));
     assert_eq!(plan.legs[1].quantity.0, Decimal::from(1));
     assert_eq!(plan.total_quantity().0, Decimal::from(limit + 1));
 
     // Boundary 3: qty == limit - 1 -> exactly 1 leg
     let plan = plan_against_limit(&make_req(limit - 1), Some(limit)).expect("plan");
-    assert_eq!(plan.legs.len(), 1, "Mutant kill: qty == limit - 1 must have 1 leg");
+    assert_eq!(
+        plan.legs.len(),
+        1,
+        "Mutant kill: qty == limit - 1 must have 1 leg"
+    );
     assert_eq!(plan.legs[0].quantity.0, Decimal::from(limit - 1));
 
     // Boundary 4: qty == 2 * limit - 1 -> exactly 2 legs (limit, limit - 1)
     let plan = plan_against_limit(&make_req(2 * limit - 1), Some(limit)).expect("plan");
-    assert_eq!(plan.legs.len(), 2, "Mutant kill: qty == 2 * limit - 1 must have 2 legs");
+    assert_eq!(
+        plan.legs.len(),
+        2,
+        "Mutant kill: qty == 2 * limit - 1 must have 2 legs"
+    );
     assert_eq!(plan.legs[0].quantity.0, Decimal::from(limit));
     assert_eq!(plan.legs[1].quantity.0, Decimal::from(limit - 1));
 
     // Boundary 5: qty == 2 * limit -> exactly 2 legs (limit, limit)
     let plan = plan_against_limit(&make_req(2 * limit), Some(limit)).expect("plan");
-    assert_eq!(plan.legs.len(), 2, "Mutant kill: qty == 2 * limit must have 2 legs");
+    assert_eq!(
+        plan.legs.len(),
+        2,
+        "Mutant kill: qty == 2 * limit must have 2 legs"
+    );
     assert_eq!(plan.legs[0].quantity.0, Decimal::from(limit));
     assert_eq!(plan.legs[1].quantity.0, Decimal::from(limit));
 
     // Boundary 6: qty == 2 * limit + 1 -> exactly 3 legs (limit, limit, 1)
     // If mutant used integer division (2*limit + 1) / limit = 2 legs!
     let plan = plan_against_limit(&make_req(2 * limit + 1), Some(limit)).expect("plan");
-    assert_eq!(plan.legs.len(), 3, "Mutant kill: qty == 2 * limit + 1 must have 3 legs");
+    assert_eq!(
+        plan.legs.len(),
+        3,
+        "Mutant kill: qty == 2 * limit + 1 must have 3 legs"
+    );
     assert_eq!(plan.legs[0].quantity.0, Decimal::from(limit));
     assert_eq!(plan.legs[1].quantity.0, Decimal::from(limit));
     assert_eq!(plan.legs[2].quantity.0, Decimal::from(1));
@@ -95,7 +119,10 @@ fn test_mutation_kill_chunk_cap_and_min_chunking() {
                 leg.quantity.0,
                 limit
             );
-            assert!(leg.quantity.0 > Decimal::ZERO, "Leg quantity must be positive");
+            assert!(
+                leg.quantity.0 > Decimal::ZERO,
+                "Leg quantity must be positive"
+            );
         }
 
         // Invariant 3: Expected leg count equals ceil(qty / limit)
